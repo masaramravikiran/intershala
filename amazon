@@ -1,0 +1,152 @@
+# Amazon Best Sellers Scraper
+
+This Python script uses Selenium to scrape data from Amazon's Best Sellers section. It extracts product details from selected categories and saves the data in a structured JSON format.
+
+## Prerequisites
+
+1. Install Python (>= 3.7).
+2. Install Google Chrome and download the corresponding ChromeDriver.
+3. Install the required Python packages:
+   ```bash
+   pip install selenium
+   ```
+
+## Usage
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/amazon-bestsellers-scraper.git
+   cd amazon-bestsellers-scraper
+   ```
+
+2. Update the script with your Amazon login credentials:
+   ```python
+   USERNAME = "your_amazon_email"
+   PASSWORD = "your_amazon_password"
+   ```
+
+3. Add the category URLs you want to scrape in the `CATEGORY_URLS` list.
+
+4. Run the script:
+   ```bash
+   python amazon_scraper.py
+   ```
+
+## Code
+
+```python
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+import time
+import json
+
+# Configuration
+USERNAME = "your_amazon_email"
+PASSWORD = "your_amazon_password"
+BASE_URL = "https://www.amazon.in/gp/bestsellers/"
+CATEGORY_URLS = [
+    "https://www.amazon.in/gp/bestsellers/kitchen/ref=zg_bs_nav_kitchen_0",
+    "https://www.amazon.in/gp/bestsellers/shoes/ref=zg_bs_nav_shoes_0",
+    "https://www.amazon.in/gp/bestsellers/computers/ref=zg_bs_nav_computers_0",
+    "https://www.amazon.in/gp/bestsellers/electronics/ref=zg_bs_nav_electronics_0",
+    # Add 6 more category URLs here
+]
+OUTPUT_FILE = "amazon_bestsellers.json"
+
+# Initialize WebDriver
+def init_driver():
+    options = webdriver.ChromeOptions()
+    options.add_argument("--start-maximized")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    driver = webdriver.Chrome(options=options)
+    return driver
+
+def login(driver):
+    driver.get(BASE_URL)
+    try:
+        login_button = driver.find_element(By.ID, "nav-link-accountList")
+        login_button.click()
+
+        email_input = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "ap_email"))
+        )
+        email_input.send_keys(USERNAME)
+        email_input.send_keys(Keys.RETURN)
+
+        password_input = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "ap_password"))
+        )
+        password_input.send_keys(PASSWORD)
+        password_input.send_keys(Keys.RETURN)
+
+    except Exception as e:
+        print("Error during login:", e)
+
+def scrape_category(driver, url):
+    data = []
+    driver.get(url)
+    
+    try:
+        for i in range(1, 151):
+            try:
+                product = {}
+                
+                product_name = driver.find_element(By.XPATH, f"//div[@id='zg-ordered-list']/li[{i}]//a/div").text
+                product["Product Name"] = product_name
+
+                # Add scraping logic for other details here
+                # Example: 
+                # product_price = driver.find_element(By.XPATH, f"...price_xpath...").text
+                # product["Product Price"] = product_price
+
+                # Append the product to data
+                data.append(product)
+            except NoSuchElementException:
+                continue
+    except Exception as e:
+        print(f"Error scraping category {url}: {e}")
+
+    return data
+
+def main():
+    driver = init_driver()
+    login(driver)
+
+    all_data = []
+
+    for url in CATEGORY_URLS:
+        category_data = scrape_category(driver, url)
+        all_data.extend(category_data)
+
+    driver.quit()
+
+    # Save to JSON
+    with open(OUTPUT_FILE, "w") as file:
+        json.dump(all_data, file, indent=4)
+
+    print(f"Data saved to {OUTPUT_FILE}")
+
+if __name__ == "__main__":
+    main()
+```
+
+## Deliverables
+
+- **`amazon_scraper.py`**: The Python script.
+- **`requirements.txt`**: List of dependencies.
+
+### requirements.txt
+```
+selenium
+```
+
+## Notes
+
+1. Replace `USERNAME` and `PASSWORD` with valid Amazon credentials.
+2. Add 6 additional category URLs to the `CATEGORY_URLS` list.
+3. Ensure the script complies with Amazon's terms of service.
+4. For deployment, consider setting up GitHub Actions or another CI/CD tool for automated runs.
